@@ -157,6 +157,16 @@ export function is(x: any, y: any): boolean {
 
 export let isArray = Array.isArray
 
+/**
+ * Returns true if the given property name is a valid array index
+ * ("0", "1", ..., but not "01" or "length").
+ */
+/*#__PURE__*/
+export function isArrayIndex(value: string | number): value is number | string {
+	const n = +value
+	return Number.isInteger(n) && String(n) === value
+}
+
 /*#__PURE__*/
 export let isMap = (target: any): target is AnyMap => target instanceof Map
 

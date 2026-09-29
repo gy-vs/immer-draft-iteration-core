@@ -7,11 +7,13 @@ import {
 	AnySet,
 	ArchType,
 	die,
-	ImmerScope
+	ImmerScope,
+	ProxyArrayState
 } from "../internal"
 
 export const PluginMapSet = "MapSet"
 export const PluginPatches = "Patches"
+export const PluginArrayMethods = "ArrayMethods"
 
 export type PatchesPlugin = {
 	generatePatches_(
@@ -34,10 +36,17 @@ export type MapSetPlugin = {
 	fixSetContents: (state: ImmerState) => void
 }
 
+export type ArrayMethodsPlugin = {
+	createMethodInterceptor: (state: ProxyArrayState, method: string) => Function
+	isArrayOperationMethod: (method: string) => boolean
+	isMutatingArrayMethod: (method: string) => boolean
+}
+
 /** Plugin utilities */
 const plugins: {
 	Patches?: PatchesPlugin
 	MapSet?: MapSetPlugin
+	ArrayMethods?: ArrayMethodsPlugin
 } = {}
 
 type Plugins = typeof plugins
@@ -61,6 +70,10 @@ export function loadPlugin<K extends keyof Plugins>(
 	implementation: Plugins[K]
 ): void {
 	if (!plugins[pluginKey]) plugins[pluginKey] = implementation
+}
+
+export let clearPlugin = <K extends keyof Plugins>(pluginKey: K): void => {
+	delete plugins[pluginKey]
 }
 /** Map / Set plugin */
 

@@ -1,5 +1,4 @@
 import {
-	each,
 	has,
 	is,
 	isDraftable,
@@ -17,13 +16,13 @@ import {
 	die,
 	createProxy,
 	ArchType,
-	ImmerScope,
 	handleCrossReference,
 	WRITABLE,
 	CONFIGURABLE,
 	ENUMERABLE,
 	VALUE,
-	isArray
+	isArray,
+	isArrayIndex
 } from "../internal"
 
 interface ProxyBaseState extends ImmerBaseState {
@@ -43,6 +42,15 @@ export interface ProxyArrayState extends ProxyBaseState {
 	base_: AnyArray
 	copy_: AnyArray | null
 	draft_: Drafted<AnyArray, ProxyArrayState>
+	// Name of the array method currently executing via the
+	// enableArrayMethods plugin (e.g. "sort"), or undefined.
+	operationMethod?: string
+	// True after shift/unshift/splice/reverse/sort, i.e. operations that
+	// can relocate elements to indices they did not occupy in the base.
+	allIndicesReassigned_?: boolean
+	// Raw base references present at the time all indices got reassigned,
+	// used to detect relocated (un-drafted) base values in the get trap.
+	baseRefs_?: Set<any>
 }
 
 type ProxyState = ProxyObjectState | ProxyArrayState
