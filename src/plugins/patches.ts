@@ -185,10 +185,21 @@ export function enablePatches() {
 		}
 
 		// Process replaced indices.
+		//
+		// Normally an index carries a patch only when it was written through
+		// the set trap (`assigned_`). Arrays rearranged in bulk by the
+		// `enableArrayMethods` plugin (reverse/sort/splice/...) are flagged
+		// with `arrayMethodMutated_` instead of one assigned entry per moved
+		// index; for those the set of replaced indices is derived here by
+		// diffing the copy against the base, which produces the exact same
+		// patches the per-index trap would have produced.
+		const methodMutated = (state as ProxyArrayState).arrayMethodMutated_
 		for (let i = 0; i < base_.length; i++) {
 			const copiedItem = copy_[i]
 			const baseItem = base_[i]
-			if (assigned_?.get(i.toString()) && copiedItem !== baseItem) {
+			const indexAssigned = assigned_?.get(i.toString())
+			const indexChangedByMethod = methodMutated && copiedItem !== baseItem
+			if ((indexAssigned || indexChangedByMethod) && copiedItem !== baseItem) {
 				const childState = copiedItem?.[DRAFT_STATE]
 				if (childState && childState.modified_) {
 					// Skip - let the child generate its own patches

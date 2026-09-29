@@ -43,6 +43,14 @@ export interface ProxyArrayState extends ProxyBaseState {
 	base_: AnyArray
 	copy_: AnyArray | null
 	draft_: Drafted<AnyArray, ProxyArrayState>
+	/**
+	 * Set by the `enableArrayMethods` plugin after a mutating array method
+	 * rearranged `copy_` directly. When set, `assigned_` does not hold
+	 * per-index flags for the rearranged slots yet: the entries are derived
+	 * lazily by diffing `base_` against `copy_` (during patch generation),
+	 * avoiding one `Map#set` per moved element on the hot path.
+	 */
+	arrayMethodMutated_?: boolean
 }
 
 type ProxyState = ProxyObjectState | ProxyArrayState
@@ -236,6 +244,23 @@ each(objectTraps, (key, fn) => {
 		return fn.apply(this, args)
 	}
 })
+// The array `get` trap is the single entry point for the `enableArrayMethods`
+// plugin: intercepted array methods are resolved *before* the generic trap
+// would draft a property, so that mutating/iterating methods can operate on
+// `copy_` directly instead of drafting every accessed index one by one.
+// (The plugin itself leaves genuine own data properties and everything on the
+// prototype chain other than the intercepted names untouched.)
+arrayTraps.get = function(target, prop, receiver) {
+	const state = target[0]
+	// Each scope snapshots the globally registered plugins when it is
+	// created, so this lookup follows the exact same mechanism as MapSet.
+	const arrayMethods = state.scope_.arrayMethodsPlugin_
+	if (arrayMethods) {
+		const method = arrayMethods.getArrayMethod_(state, prop)
+		if (method !== undefined) return method
+	}
+	return objectTraps.get!.call(this, state, prop, receiver)
+}
 arrayTraps.deleteProperty = function(state, prop) {
 	if (process.env.NODE_ENV !== "production" && isNaN(parseInt(prop as any)))
 		die(13)

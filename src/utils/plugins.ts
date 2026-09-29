@@ -1,3 +1,4 @@
+import type {ProxyArrayState} from "../core/proxy"
 import {
 	ImmerState,
 	Patch,
@@ -12,6 +13,7 @@ import {
 
 export const PluginMapSet = "MapSet"
 export const PluginPatches = "Patches"
+export const PluginArrayMethods = "ArrayMethods"
 
 export type PatchesPlugin = {
 	generatePatches_(
@@ -34,10 +36,24 @@ export type MapSetPlugin = {
 	fixSetContents: (state: ImmerState) => void
 }
 
+export type ArrayMethodsPlugin = {
+	/**
+	 * Returns the intercepted implementation of an array method for the
+	 * given draft state, or `undefined` if `prop` is not an intercepted
+	 * array method (in which case the proxy `get` trap falls back to its
+	 * regular, per-index drafting behavior).
+	 */
+	getArrayMethod_(
+		state: ProxyArrayState,
+		prop: PropertyKey
+	): ((...args: any[]) => any) | undefined
+}
+
 /** Plugin utilities */
 const plugins: {
 	Patches?: PatchesPlugin
 	MapSet?: MapSetPlugin
+	ArrayMethods?: ArrayMethodsPlugin
 } = {}
 
 type Plugins = typeof plugins
